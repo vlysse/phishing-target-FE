@@ -31,8 +31,12 @@ export function LoginPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Invalid email or password.");
+      } else if (err instanceof ApiError && err.status === 400) {
+        setError("Enter a valid email address and password.");
+      } else if (err instanceof ApiError) {
+        setError("The server couldn't complete sign-in. Please try again shortly.");
       } else {
-        setError("Something went wrong. Please try again.");
+        setError("Unable to reach the server. Check your connection and try again.");
       }
     } finally {
       setSubmitting(false);
