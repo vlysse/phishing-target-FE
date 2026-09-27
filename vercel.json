@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "login.tdvx.site" }],
+      "destination": "/login"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
