@@ -24,7 +24,7 @@ export function Sidebar() {
 
   async function handleLogout() {
     await logout();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   }
 
   return (

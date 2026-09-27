@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./lib/auth-context";
+import { AuthProvider, useAuth } from "./lib/auth-context";
+import { useCanonicalHost } from "./lib/canonical-host";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { AccountsPage } from "./pages/AccountsPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -8,21 +9,32 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { TransactionDetailPage } from "./pages/TransactionDetailPage";
 import { TransactionsPage } from "./pages/TransactionsPage";
 import { TransferPage } from "./pages/TransferPage";
+import { Spinner } from "./components/ui/Spinner";
+
+/**
+ * The root path shows the login when signed out and the dashboard when signed
+ * in — so the login lives at "/" and no "/login" URL is ever shown.
+ */
+function RootGate() {
+  const { status } = useAuth();
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--color-surface)]">
+        <Spinner />
+      </div>
+    );
+  }
+  return status === "authenticated" ? <DashboardPage /> : <LoginPage />;
+}
 
 export default function App() {
+  useCanonicalHost();
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<RootGate />} />
           <Route
             path="/transactions"
             element={
