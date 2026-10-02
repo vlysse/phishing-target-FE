@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import type { ComponentType, SVGProps } from "react";
 import { useAuth } from "../../lib/auth-context";
+import { goToLoginHost } from "../../lib/canonical-host";
 import {
   AccountsIcon,
   HomeIcon,
@@ -23,8 +24,12 @@ export function Sidebar() {
   const navigate = useNavigate();
 
   async function handleLogout() {
-    await logout();
-    navigate("/", { replace: true });
+    await logout(); // clears the JWT (httpOnly cookie) + client state
+    // Same redirect logic as the guest guard: go to the login subdomain. Falls
+    // back to in-app routing on localhost / when no login host is configured.
+    if (!goToLoginHost()) {
+      navigate("/", { replace: true });
+    }
   }
 
   return (

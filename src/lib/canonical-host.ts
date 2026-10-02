@@ -1,21 +1,55 @@
 import { useEffect } from "react";
 
+type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+
+const APP_HOST = (import.meta.env.VITE_CANONICAL_HOST as string | undefined)?.trim();
+const LOGIN_HOST = (import.meta.env.VITE_LOGIN_HOST as string | undefined)?.trim();
+
+function isLocalHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
 /**
- * Forces the app onto its canonical host (e.g. app.tdvx.site). If the page is
- * loaded on any other production hostname — a bare *.vercel.app URL, or a
- * sibling subdomain like login.tdvx.site — the browser is redirected to the
- * same path on VITE_CANONICAL_HOST. Localhost/dev is never redirected, and the
- * guard is a no-op when VITE_CANONICAL_HOST is unset.
+ * Send the browser to the login subdomain (e.g. login.tdvx.site). Returns true
+ * if a redirect was issued, false if it was a no-op (localhost, already there,
+ * or VITE_LOGIN_HOST unset) — so callers can fall back to in-app routing.
  */
-export function useCanonicalHost() {
+export function goToLoginHost(): boolean {
+  if (!LOGIN_HOST) return false;
+  const { hostname, protocol } = window.location;
+  if (isLocalHost(hostname) || hostname === LOGIN_HOST) return false;
+  window.location.replace(`${protocol}//${LOGIN_HOST}/`);
+  return true;
+}
+
+/** Send the browser to the app (canonical) subdomain, preserving the path. */
+export function goToAppHost(): boolean {
+  if (!APP_HOST) return false;
+  const { hostname, protocol, pathname, search, hash } = window.location;
+  if (isLocalHost(hostname) || hostname === APP_HOST) return false;
+  window.location.replace(`${protocol}//${APP_HOST}${pathname}${search}${hash}`);
+  return true;
+}
+
+/**
+ * RootGate guard: once the user is authenticated, make sure they're on the app
+ * subdomain. No-op on localhost or when already there.
+ */
+export function useCanonicalHost(status: AuthStatus) {
   useEffect(() => {
-    const canonical = (import.meta.env.VITE_CANONICAL_HOST as string | undefined)?.trim();
-    if (!canonical) return;
+    if (status === "authenticated") goToAppHost();
+  }, [status]);
+}
 
-    const { hostname, protocol, pathname, search, hash } = window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") return;
-    if (hostname === canonical) return;
-
-    window.location.replace(`${protocol}//${canonical}${pathname}${search}${hash}`);
-  }, []);
+/**
+ * App-scaffold guard: when the user is not logged in, bounce them to the login
+ * subdomain. It reacts to `status`, so logging out (JWT cleared →
+ * unauthenticated) triggers the same redirect. No-op while auth is still
+ * loading, on localhost, or when already on the login host — so the login +
+ * MFA flow (which runs on that host while unauthenticated) isn't disrupted.
+ */
+export function useRequireLoginHost(status: AuthStatus) {
+  useEffect(() => {
+    if (status === "unauthenticated") goToLoginHost();
+  }, [status]);
 }
